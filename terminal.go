@@ -8,22 +8,32 @@ import (
 	"strings"
 )
 
+var TCONF_RAW = []string{
+	"-F", "/dev/tty",
+	"-icanon", "-echo",
+	"min", "0", "time", "0",
+	"-isig", "-ixon",
+}
+
+var TCONF_NORMAL = []string{
+	"-F", "/dev/tty", "icanon", "echo",
+}
+
 type Terminal struct {
 }
 
-func NewTerminal() (*Terminal) {
-  return &Terminal{}
+func NewTerminal() *Terminal {
+	return &Terminal{}
 }
 
 func (terminal *Terminal) configure() {
-	exec.Command("stty", "-F", "/dev/tty", "-icanon", "-echo", "min", "0", "time", "0", "-isig", "-ixon").Run()
-	// exec.Command("stty", "-F", "/dev/tty", "-icanon", "-echo").Run()
-  fmt.Printf("\x1B\x5B?25l")
+	exec.Command("stty", TCONF_RAW...).Run()
+	fmt.Printf("\x1B\x5B?25l")
 }
 
 func (terminal *Terminal) restore() {
-	exec.Command("stty", "-F", "/dev/tty", "icanon", "echo").Run()
-  fmt.Printf("\x1B\x5B?25h")
+	exec.Command("stty", TCONF_NORMAL...).Run()
+	fmt.Printf("\x1B\x5B?25h")
 }
 
 func (terminal *Terminal) commandOutput(name string, arg ...string) string {
@@ -34,18 +44,17 @@ func (terminal *Terminal) commandOutput(name string, arg ...string) string {
 		panic(err)
 	}
 
-  return string(out)
+	return string(out)
 }
 
 func (terminal *Terminal) get_size() (int, int) {
-  // Size is expressed in [cols rows]
-  output := terminal.commandOutput("stty", "size")
-  output = strings.TrimSpace(output)
-  size := strings.Split(output, " ")
-  rows,_ := strconv.Atoi(size[0])
-  cols,_ := strconv.Atoi(size[1])
-  
-  return cols, rows
+	output := terminal.commandOutput("stty", "size")
+	output = strings.TrimSpace(output)
+	size := strings.Split(output, " ")
+	rows, _ := strconv.Atoi(size[0])
+	cols, _ := strconv.Atoi(size[1])
+
+	return cols, rows
 }
 
 func (terminal *Terminal) read_raw() []byte {
@@ -53,10 +62,9 @@ func (terminal *Terminal) read_raw() []byte {
 	os.Stdin.Sync()
 	n, err := os.Stdin.Read(b)
 	if err != nil {
-    return []byte{}
+		return []byte{}
 	}
 	b = b[:n]
-  // fmt.Printf("Read %d bytes\n", n)
 
 	return b
 }
